@@ -1,0 +1,18 @@
+# Render Blueprint — deploy SureLink API from the "backend" folder.
+# Push this repo to GitHub, then in Render: New → Blueprint → connect repo → use this file.
+services:
+  - type: web
+    name: surelink-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: "*"

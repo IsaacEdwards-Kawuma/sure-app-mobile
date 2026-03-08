@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Env and secrets
+.env
+.env.local
+*.env
+
+# Build / IDE
+dist/
+build/
+.expo/
+*.log
+.DS_Store
+
+# Local DB (if any)
+*.db
