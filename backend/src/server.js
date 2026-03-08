@@ -1,10 +1,4 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
-
+import './loadEnv.js';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -21,6 +15,7 @@ import { backupRouter } from './routes/backup.js';
 import { monitoringRouter } from './routes/monitoring.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { authMiddleware } from './middleware/auth.js';
+import { logger } from './lib/logger.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +39,15 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 app.use('/api', limiter);
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.LOGIN_RATE_LIMIT_MAX) || 20,
+  message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/auth/login', loginLimiter);
 
 // Public
 app.use('/api/auth', authRouter);
@@ -81,20 +85,20 @@ app.use(errorHandler);
 async function start() {
   const hasDb = !!process.env.DATABASE_URL;
   if (!hasDb) {
-    console.error('DATABASE_URL is not set. Put your Neon connection string in backend/.env');
+    logger.error('DATABASE_URL is not set. Put your Neon connection string in backend/.env');
     process.exit(1);
   }
-  console.log('Database: Neon (DATABASE_URL set)');
+  logger.info('Database: Neon (DATABASE_URL set)');
   try {
     const { runPgSetup } = await import('./db/pgSetup.js');
     await runPgSetup();
-    console.log('PostgreSQL database ready.');
+    logger.info('PostgreSQL database ready.');
   } catch (err) {
-    console.error('PostgreSQL setup failed:', err);
+    logger.error('PostgreSQL setup failed', { err: err.message });
     process.exit(1);
   }
   app.listen(PORT, () => {
-    console.log(`SureLink API listening on port ${PORT}`);
+    logger.info(`SureLink API listening on port ${PORT}`);
   });
 }
 

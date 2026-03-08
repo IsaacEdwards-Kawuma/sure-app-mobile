@@ -1,6 +1,9 @@
-# WiFi Manager — Native Mobile App
+# SureLink WiFi Manager
 
-Production-ready native mobile app for small WiFi hotspot businesses. Runs on **iOS and Android** with a **Node.js + Express** backend. Supports **SQLite** (file-based) or **PostgreSQL**.
+Production-ready native mobile app for small WiFi hotspot businesses. Runs on **iOS and Android** (React Native / Expo) with a **Node.js + Express** backend. Supports **PostgreSQL** (e.g. Neon) or SQLite.
+
+- **Environment variables**: see [ENV.md](./ENV.md) for backend and mobile env vars (including production).
+- **Deploy**: see [RENDER.md](./RENDER.md) and `backend/DEPLOY-RENDER.md` for hosting the API.
 
 ---
 

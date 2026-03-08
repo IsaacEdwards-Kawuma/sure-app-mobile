@@ -81,8 +81,12 @@ export default function SignupScreen() {
   if (signupRole === null) {
     return (
       <View style={[styles.container, { backgroundColor: background }]}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text variant="headlineMedium" style={[styles.title, { color: textPrimary }]}>
+        <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            accessibilityLabel="Sign up - choose role"
+          >
+          <Text variant="headlineMedium" style={[styles.title, { color: textPrimary }]} accessibilityRole="header">
             Create account
           </Text>
           <Text variant="bodyMedium" style={[styles.subtitle, { color: textSecondary }]}>
@@ -93,6 +97,8 @@ export default function SignupScreen() {
             style={[styles.roleCard, { backgroundColor: surface }]}
             onPress={() => { clearError(); setSignupRole('user'); }}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Sign up as User, attendant with daily entry and limited access"
           >
             <View style={styles.roleIconWrap}>
               <MaterialCommunityIcons name="account" size={32} color="#0B6E6E" />
@@ -107,6 +113,8 @@ export default function SignupScreen() {
             style={[styles.roleCard, { backgroundColor: surface }]}
             onPress={() => { clearError(); setSignupRole('admin'); }}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Sign up as Admin, full access to settings and reports"
           >
             <View style={[styles.roleIconWrap, styles.roleIconAdmin]}>
               <MaterialCommunityIcons name="shield-account" size={32} color="#C9A84C" />

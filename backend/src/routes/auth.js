@@ -3,9 +3,11 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { query } from '../db/index.js';
 import { logAdmin } from '../db/adminLog.js';
+import { JWT_SECRET } from '../config.js';
+import { validateRegister, validateLogin, validateUpdateMe } from '../lib/validate.js';
+import { logger } from '../lib/logger.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 const SALT_ROUNDS = 10;
 
 // GET /api/auth/first-run — true when no users exist (show registration)
@@ -34,21 +36,20 @@ router.get('/users', async (req, res, next) => {
 // POST /api/auth/register — role: 'user' (attendant) or 'admin'. Multiple admins allowed.
 router.post('/register', async (req, res, next) => {
   try {
-    const { name, pin, role: requestedRole } = req.body;
-    if (!name || !pin || String(pin).length !== 4) {
-      return res.status(400).json({ error: 'Name and 4-digit PIN required' });
+    const { name, pin, role, errors } = validateRegister(req.body);
+    if (errors.length) {
+      return res.status(400).json({ error: errors[0] });
     }
-    const role = requestedRole === 'admin' ? 'admin' : 'user';
     const isAdmin = role === 'admin';
 
-    const hashedPin = await bcrypt.hash(String(pin), SALT_ROUNDS);
+    const hashedPin = await bcrypt.hash(pin, SALT_ROUNDS);
     const dbRole = isAdmin ? 'admin' : 'attendant';
     const permissions = isAdmin ? 'all' : 'entry';
     const result = await query(
       `INSERT INTO users (name, pin_hash, role, permissions, active)
        VALUES ($1, $2, $3, $4, true)
        RETURNING id, name, role, permissions, active, created_at`,
-      [name.trim(), hashedPin, dbRole, permissions]
+      [name, hashedPin, dbRole, permissions]
     );
     const user = result.rows[0];
     await logAdmin(
@@ -70,9 +71,9 @@ router.post('/register', async (req, res, next) => {
 // POST /api/auth/login
 router.post('/login', async (req, res, next) => {
   try {
-    const { userId, pin } = req.body;
-    if (!userId || !pin) {
-      return res.status(400).json({ error: 'User ID and PIN required' });
+    const { userId, pin, errors } = validateLogin(req.body);
+    if (errors.length) {
+      return res.status(400).json({ error: errors[0] });
     }
     const result = await query(
       'SELECT id, name, pin_hash, role, permissions, active FROM users WHERE id = $1',
@@ -82,7 +83,7 @@ router.post('/login', async (req, res, next) => {
     if (!user || !user.active) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-    const match = await bcrypt.compare(String(pin), user.pin_hash);
+    const match = await bcrypt.compare(pin, user.pin_hash);
     if (!match) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -144,7 +145,12 @@ router.put('/me', async (req, res, next) => {
     const payload = jwt.verify(token, JWT_SECRET);
     const userId = payload.userId;
 
-    const { name, phone, current_pin, new_pin } = req.body;
+    const validated = validateUpdateMe(req.body);
+    if (validated.errors.length) {
+      return res.status(400).json({ error: validated.errors[0] });
+    }
+    const { name, phone, current_pin, new_pin } = validated;
+
     const result = await query(
       'SELECT id, name, role, permissions, active, id_number, phone, pin_hash FROM users WHERE id = $1',
       [userId]
@@ -154,25 +160,22 @@ router.put('/me', async (req, res, next) => {
       return res.status(401).json({ error: 'User not found or inactive' });
     }
 
-    if (new_pin != null && String(new_pin).length !== 4) {
-      return res.status(400).json({ error: 'New PIN must be 4 digits' });
-    }
     if (new_pin != null) {
       if (!current_pin) {
         return res.status(400).json({ error: 'Current PIN required to set a new PIN' });
       }
-      const match = await bcrypt.compare(String(current_pin), user.pin_hash);
+      const match = await bcrypt.compare(current_pin, user.pin_hash);
       if (!match) {
         return res.status(401).json({ error: 'Current PIN is incorrect' });
       }
     }
 
-    const newName = name != null ? String(name).trim() : user.name;
-    const newPhone = phone != null ? String(phone).trim() : user.phone;
+    const newName = name != null ? name : user.name;
+    const newPhone = phone != null ? phone : user.phone;
 
     const now = new Date().toISOString();
     if (new_pin != null) {
-      const hashedPin = await bcrypt.hash(String(new_pin), SALT_ROUNDS);
+      const hashedPin = await bcrypt.hash(new_pin, SALT_ROUNDS);
       await query(
         'UPDATE users SET name = $1, phone = $2, pin_hash = $3, updated_at = $4 WHERE id = $5',
         [newName, newPhone || null, hashedPin, now, userId]
@@ -208,14 +211,52 @@ router.put('/me', async (req, res, next) => {
   }
 });
 
-// POST /api/auth/forgot-pin (e.g. send reset link or admin reset)
-router.post('/forgot-pin', async (req, res, next) => {
-  res.status(501).json({ error: 'Not implemented: implement forgot-pin flow (e.g. admin-only reset)' });
+// POST /api/auth/forgot-pin — no email; instruct user to contact admin
+router.post('/forgot-pin', async (req, res) => {
+  res.json({
+    message: 'PIN cannot be recovered. Ask an admin to reset your PIN (Settings → Users → edit user → set new PIN).',
+  });
 });
 
-// POST /api/auth/reset-pin
+// POST /api/auth/reset-pin — admin only: set another user's PIN (body: user_id, new_pin)
 router.post('/reset-pin', async (req, res, next) => {
-  res.status(501).json({ error: 'Not implemented: implement reset-pin with token or admin' });
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authorization required' });
+  }
+  try {
+    const token = authHeader.slice(7);
+    const payload = jwt.verify(token, JWT_SECRET);
+    const adminResult = await query(
+      'SELECT id, role, permissions FROM users WHERE id = $1 AND active = true',
+      [payload.userId]
+    );
+    const admin = adminResult.rows[0];
+    if (!admin || (admin.permissions !== 'all' && !String(admin.permissions).includes('all'))) {
+      return res.status(403).json({ error: 'Admin only' });
+    }
+    const user_id = req.body?.user_id != null ? Number(req.body.user_id) : NaN;
+    const new_pin = req.body?.new_pin != null ? String(req.body.new_pin) : '';
+    if (!Number.isInteger(user_id) || user_id < 1 || !/^\d{4}$/.test(new_pin)) {
+      return res.status(400).json({ error: 'user_id (number) and new_pin (4 digits) required' });
+    }
+    const hashedPin = await bcrypt.hash(new_pin, SALT_ROUNDS);
+    const update = await query(
+      'UPDATE users SET pin_hash = $1, updated_at = $2 WHERE id = $3 RETURNING id, name',
+      [hashedPin, new Date().toISOString(), user_id]
+    );
+    if (update.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    await logAdmin('PIN Reset', { targetUserId: user_id, targetName: update.rows[0].name }, payload.userId);
+    logger.info('PIN reset', { targetUserId: user_id, byAdminId: payload.userId });
+    res.json({ message: 'PIN updated' });
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+    next(err);
+  }
 });
 
 export { router as authRouter };

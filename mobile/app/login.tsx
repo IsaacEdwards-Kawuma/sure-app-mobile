@@ -57,8 +57,12 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: background }]} keyboardShouldPersistTaps="handled">
-      <Text variant="headlineMedium" style={[styles.title, { color: textPrimary }]}>
+    <ScrollView
+      contentContainerStyle={[styles.container, { backgroundColor: background }]}
+      keyboardShouldPersistTaps="handled"
+      accessibilityLabel="Login form"
+    >
+      <Text variant="headlineMedium" style={[styles.title, { color: textPrimary }]} accessibilityRole="header">
         SureLink WiFi Manager
       </Text>
       <Text variant="bodyMedium" style={[styles.subtitle, { color: textSecondary }]}>
@@ -69,6 +73,9 @@ export default function LoginScreen() {
         <TouchableOpacity
           style={[styles.toggleBtn, { backgroundColor: surface }, loginBy === 'userId' && styles.toggleBtnActive]}
           onPress={() => setLoginBy('userId')}
+          accessibilityRole="button"
+          accessibilityLabel="Login by User ID"
+          accessibilityState={{ selected: loginBy === 'userId' }}
         >
           <Text style={[styles.toggleText, { color: textSecondary }, loginBy === 'userId' && styles.toggleTextActive]}>
             User ID
@@ -77,6 +84,9 @@ export default function LoginScreen() {
         <TouchableOpacity
           style={[styles.toggleBtn, { backgroundColor: surface }, loginBy === 'userName' && styles.toggleBtnActive]}
           onPress={() => setLoginBy('userName')}
+          accessibilityRole="button"
+          accessibilityLabel="Login by User name"
+          accessibilityState={{ selected: loginBy === 'userName' }}
         >
           <Text style={[styles.toggleText, { color: textSecondary }, loginBy === 'userName' && styles.toggleTextActive]}>
             User name
@@ -93,6 +103,7 @@ export default function LoginScreen() {
           mode="outlined"
           style={styles.input}
           placeholder="e.g. 1"
+          accessibilityLabel="User ID"
         />
       ) : (
         <TextInput
@@ -103,6 +114,7 @@ export default function LoginScreen() {
           mode="outlined"
           style={styles.input}
           placeholder="e.g. Admin"
+          accessibilityLabel="User name"
         />
       )}
 
@@ -115,12 +127,28 @@ export default function LoginScreen() {
         maxLength={4}
         mode="outlined"
         style={styles.input}
+        accessibilityLabel="4-digit PIN"
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button mode="contained" onPress={handleLogin} style={styles.button}>
+      {error ? (
+        <Text style={styles.error} accessibilityRole="alert">
+          {error}
+        </Text>
+      ) : null}
+      <Button
+        mode="contained"
+        onPress={handleLogin}
+        style={styles.button}
+        accessibilityLabel="Sign in"
+        accessibilityRole="button"
+      >
         Sign In
       </Button>
-      <TouchableOpacity onPress={() => router.push('/signup')} style={styles.signupLink}>
+      <TouchableOpacity
+        onPress={() => router.push('/signup')}
+        style={styles.signupLink}
+        accessibilityLabel="Create an account"
+        accessibilityRole="link"
+      >
         <Text style={[styles.signupText, { color: textSecondary }]}>Don’t have an account? Create one</Text>
       </TouchableOpacity>
     </ScrollView>

@@ -1,11 +1,14 @@
 /**
  * RTK Query base API — remote PostgreSQL API only.
- * API URL from stored connection string (Settings) or EXPO_PUBLIC_API_URL.
+ * On 401, clears token and syncs auth state so app can redirect to login.
  */
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryFn } from '@reduxjs/toolkit/query';
 import type { RootState } from '../store';
 import { getApiBaseUrl } from '../config/apiUrl';
+import { clearStoredToken } from '../services/api';
+import { useAuthStore } from '../features/auth/store';
+import { logout as logoutAction } from '../features/auth/authSlice';
 
 const baseQueryRemote: BaseQueryFn = async (args, api, extraOptions) => {
   const API_BASE = await getApiBaseUrl();
@@ -18,7 +21,13 @@ const baseQueryRemote: BaseQueryFn = async (args, api, extraOptions) => {
       return headers;
     },
   });
-  return fetchQuery(args, api, extraOptions);
+  const result = await fetchQuery(args, api, extraOptions);
+  if (result.error && (result.error as { status?: number }).status === 401) {
+    await clearStoredToken();
+    useAuthStore.setState({ token: null, user: null });
+    api.dispatch(logoutAction());
+  }
+  return result;
 };
 
 export const baseApi = createApi({

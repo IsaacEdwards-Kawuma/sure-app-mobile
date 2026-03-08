@@ -1,12 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { useAuthStore } from '../src/features/auth/store';
 import { setCredentials } from '../src/features/auth/authSlice';
 import { useFirstRunQuery } from '../src/api/authApi';
 import { useDataSourceStore } from '../src/features/dataSource/store';
 import { useAppTheme } from '../src/hooks/useAppTheme';
+
+const ONBOARDING_KEY = 'surelink_onboarding_done';
 
 export default function Index() {
   const router = useRouter();
@@ -16,6 +20,7 @@ export default function Index() {
   const tokenFromZustand = useAuthStore((s) => s.token);
   const dataSourceHydrated = useDataSourceStore((s) => s.hydrated);
   const hydrateDataSource = useDataSourceStore((s) => s.hydrate);
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const { data: firstRunData, isLoading: firstRunLoading } = useFirstRunQuery(undefined, { skip: !!tokenFromZustand });
 
   useEffect(() => {
@@ -23,17 +28,42 @@ export default function Index() {
   }, [hydrateDataSource]);
 
   useEffect(() => {
-    if (!dataSourceHydrated) return;
+    AsyncStorage.getItem(ONBOARDING_KEY).then((v) => setOnboardingDone(v === 'true'));
+  }, []);
+
+  useEffect(() => {
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      const path = Linking.parse(url).path;
+      if (path === 'login') router.replace('/login');
+      else if (path === 'signup') router.replace('/signup');
+      else if (path && path.startsWith('dashboard')) router.replace('/(main)/dashboard');
+    });
+    Linking.getInitialURL().then((url) => {
+      if (!url) return;
+      const path = Linking.parse(url).path;
+      if (path === 'login') router.replace('/login');
+      else if (path === 'signup') router.replace('/signup');
+      else if (path && path.startsWith('dashboard')) router.replace('/(main)/dashboard');
+    });
+    return () => sub.remove();
+  }, [router]);
+
+  useEffect(() => {
+    if (onboardingDone === false) {
+      router.replace('/onboarding');
+      return;
+    }
+    if (!dataSourceHydrated || onboardingDone !== true) return;
     (async () => {
       await checkAuth();
       const t = useAuthStore.getState().token;
       const user = useAuthStore.getState().user;
       if (t && user) dispatch(setCredentials({ token: t, user }));
     })();
-  }, [dataSourceHydrated, dispatch, checkAuth]);
+  }, [dataSourceHydrated, onboardingDone, dispatch, checkAuth, router]);
 
   useEffect(() => {
-    if (!dataSourceHydrated) return;
+    if (!dataSourceHydrated || onboardingDone !== true) return;
     if (isLoading) return;
     const t = useAuthStore.getState().token;
     if (t) {
@@ -44,7 +74,7 @@ export default function Index() {
       if (firstRunData?.firstRun) router.replace('/signup');
       else router.replace('/login');
     }
-  }, [isLoading, firstRunLoading, firstRunData?.firstRun, token, dataSourceHydrated]);
+  }, [isLoading, firstRunLoading, firstRunData?.firstRun, token, dataSourceHydrated, onboardingDone]);
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}>
