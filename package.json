@@ -1,0 +1,8 @@
+{
+  "name": "sure-app-mobile",
+  "private": true,
+  "description": "SureLink — API lives in backend/. Set Render Root Directory to 'backend'.",
+  "scripts": {
+    "start": "echo 'ERROR: Set Root Directory to backend in Render dashboard.' && exit 1"
+  }
+}

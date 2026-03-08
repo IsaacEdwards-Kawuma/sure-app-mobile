@@ -1,0 +1,7 @@
+# Force Render to use Node.js (not Ruby).
+# In Render dashboard: set Root Directory to "backend", Build Command to "npm install", Start Command to "npm start".
+[phases.setup]
+nixPkgs = ["nodejs"]
+
+[start]
+cmd = "npm start"
