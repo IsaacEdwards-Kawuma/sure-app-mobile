@@ -25,7 +25,6 @@
     "expo-constants": "~18.0.13",
     "expo-file-system": "~19.0.21",
     "expo-font": "~14.0.11",
-    "@react-native-community/netinfo": "11.4.1",
     "expo-local-authentication": "~15.0.1",
     "expo-linking": "~8.0.11",
     "expo-router": "~6.0.0",
