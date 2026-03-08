@@ -31,7 +31,7 @@ router.get('/users', async (req, res, next) => {
   }
 });
 
-// POST /api/auth/register — role: 'user' (attendant) or 'admin'. Admin only when no users exist.
+// POST /api/auth/register — role: 'user' (attendant) or 'admin'. Multiple admins allowed.
 router.post('/register', async (req, res, next) => {
   try {
     const { name, pin, role: requestedRole } = req.body;
@@ -40,14 +40,6 @@ router.post('/register', async (req, res, next) => {
     }
     const role = requestedRole === 'admin' ? 'admin' : 'user';
     const isAdmin = role === 'admin';
-
-    if (isAdmin) {
-      const countResult = await query('SELECT COUNT(*) as c FROM users');
-      const count = Number(countResult.rows[0]?.c ?? 0);
-      if (count > 0) {
-        return res.status(403).json({ error: 'Admin account already exists. Sign up as User instead.' });
-      }
-    }
 
     const hashedPin = await bcrypt.hash(String(pin), SALT_ROUNDS);
     const dbRole = isAdmin ? 'admin' : 'attendant';

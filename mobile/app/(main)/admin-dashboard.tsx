@@ -119,7 +119,7 @@ export default function AdminDashboardScreen() {
             <Text variant="titleMedium" style={[styles.unauthorized, { color: textSecondary }]}>
               Admin access required to view this page.
             </Text>
-            <Button mode="outlined" onPress={() => router.back()} style={styles.backBtn}>
+            <Button mode="outlined" onPress={() => router.replace('/(main)/dashboard')} style={styles.backBtn}>
               Go back
             </Button>
           </Card.Content>
@@ -156,7 +156,7 @@ export default function AdminDashboardScreen() {
             </Text>
           </View>
           <Text variant="bodySmall" style={[styles.muted, { color: textSecondary }]}>
-            Server URL: your Node API address (e.g. http://localhost:3000). Backend uses your Neon database from server .env.
+            Server URL: API address (default: https://sure-app-mobile.onrender.com). Backend uses your Neon database.
           </Text>
           {apiUrlLoaded && (
             <>
@@ -164,7 +164,7 @@ export default function AdminDashboardScreen() {
                 label="Server URL (connection string)"
                 value={apiUrlInput}
                 onChangeText={setApiUrlInput}
-                placeholder={process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000'}
+                placeholder={getDefaultApiBaseUrl()}
                 mode="outlined"
                 autoCapitalize="none"
                 autoCorrect={false}

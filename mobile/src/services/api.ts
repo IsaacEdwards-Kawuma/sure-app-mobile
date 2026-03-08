@@ -2,9 +2,10 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { getApiBaseUrl } from '../config/apiUrl';
 
+// 60s timeout so Render free tier has time to wake (cold start can take 30–60s)
 export const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
-  timeout: 15000,
+  baseURL: 'https://sure-app-mobile.onrender.com/api',
+  timeout: 60000,
   headers: { 'Content-Type': 'application/json' },
 });
 

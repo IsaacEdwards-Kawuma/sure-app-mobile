@@ -6,7 +6,7 @@ import { useDispatch } from 'react-redux';
 import { useAuthStore } from '../src/features/auth/store';
 import { setCredentials } from '../src/features/auth/authSlice';
 import { useAppTheme } from '../src/hooks/useAppTheme';
-import { getApiBaseUrl, setApiBaseUrl } from '../src/config/apiUrl';
+import { getApiBaseUrl } from '../src/config/apiUrl';
 
 type LoginBy = 'userId' | 'userName';
 
@@ -19,18 +19,14 @@ export default function LoginScreen() {
   const [userId, setUserId] = useState('');
   const [userName, setUserName] = useState('');
   const [pin, setPin] = useState('');
-  const [serverUrl, setServerUrl] = useState('');
 
   useEffect(() => {
-    getApiBaseUrl().then((url) => setServerUrl(url));
     fetchUsers();
+    // Wake Render server (free tier sleeps) so login is faster
+    getApiBaseUrl().then((base) => fetch(`${base}/api/health`).catch(() => {}));
   }, []);
 
   const handleLogin = async () => {
-    const url = serverUrl.trim();
-    if (url) {
-      await setApiBaseUrl(url);
-    }
     let id: number;
     if (loginBy === 'userName') {
       const trimmed = userName.trim();
@@ -120,19 +116,6 @@ export default function LoginScreen() {
         mode="outlined"
         style={styles.input}
       />
-      <Text variant="bodySmall" style={[styles.serverLabel, { color: textSecondary }]}>
-        Server URL (on a physical device, use your PC IP e.g. http://192.168.1.5:3000)
-      </Text>
-      <TextInput
-        label="Server URL"
-        value={serverUrl}
-        onChangeText={setServerUrl}
-        mode="outlined"
-        autoCapitalize="none"
-        autoCorrect={false}
-        style={styles.input}
-        placeholder="http://192.168.x.x:3000"
-      />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button mode="contained" onPress={handleLogin} style={styles.button}>
         Sign In
@@ -150,9 +133,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     paddingVertical: 32,
-  },
-  serverLabel: {
-    marginBottom: 4,
   },
   title: { marginBottom: 8, textAlign: 'center' },
   subtitle: { marginBottom: 16, textAlign: 'center' },

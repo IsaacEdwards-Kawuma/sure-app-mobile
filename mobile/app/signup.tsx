@@ -7,7 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../src/features/auth/store';
 import { setCredentials } from '../src/features/auth/authSlice';
 import { useAppTheme } from '../src/hooks/useAppTheme';
-import { getApiBaseUrl, setApiBaseUrl } from '../src/config/apiUrl';
+import { getApiBaseUrl } from '../src/config/apiUrl';
 
 const WEAK_PINS = ['1234', '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999'];
 
@@ -29,19 +29,16 @@ export default function SignupScreen() {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
-  const [serverUrl, setServerUrl] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 
+  // Wake Render server (free tier sleeps after ~15 min) so signup is faster
   useEffect(() => {
-    getApiBaseUrl().then((url) => setServerUrl(url));
+    getApiBaseUrl().then((base) => fetch(`${base}/api/health`).catch(() => {}));
   }, []);
 
   const handleSignup = async () => {
     clearError();
     setLocalError(null);
-
-    const url = serverUrl.trim();
-    if (url) await setApiBaseUrl(url);
 
     const trimmedName = name.trim();
     if (!trimmedName) {
@@ -116,7 +113,7 @@ export default function SignupScreen() {
             </View>
             <Text variant="titleLarge" style={[styles.roleTitle, { color: textPrimary }]}>Admin</Text>
             <Text variant="bodySmall" style={[styles.roleDesc, { color: textSecondary }]}>
-              Full access — settings, users, reports. Only one admin (first signup).
+              Full access — settings, users, reports.
             </Text>
           </TouchableOpacity>
 
@@ -124,7 +121,7 @@ export default function SignupScreen() {
 
           <Button
             mode="text"
-            onPress={() => { clearError(); router.back(); }}
+            onPress={() => { clearError(); router.replace('/login'); }}
             style={styles.backButton}
             labelStyle={[styles.backLabel, { color: textSecondary }]}
           >
@@ -188,20 +185,6 @@ export default function SignupScreen() {
           placeholder="••••"
         />
 
-        <Text variant="bodySmall" style={[styles.serverLabel, { color: textSecondary }]}>
-          Server URL (on a physical device, use your PC IP e.g. http://192.168.1.5:3000)
-        </Text>
-        <TextInput
-          label="Server URL"
-          value={serverUrl}
-          onChangeText={setServerUrl}
-          mode="outlined"
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={styles.input}
-          placeholder="http://192.168.x.x:3000"
-        />
-
         {displayError ? <Text style={styles.error}>{displayError}</Text> : null}
 
         <Button mode="contained" onPress={handleSignup} style={styles.button}>
@@ -218,7 +201,7 @@ export default function SignupScreen() {
         </Button>
         <Button
           mode="text"
-          onPress={() => { clearError(); setSignupRole(null); router.back(); }}
+          onPress={() => { clearError(); setSignupRole(null); router.replace('/login'); }}
           style={styles.backButton}
           labelStyle={[styles.backLabel, { color: textSecondary }]}
         >
@@ -271,9 +254,6 @@ const styles = StyleSheet.create({
   },
   roleDesc: {
     marginBottom: 0,
-  },
-  serverLabel: {
-    marginBottom: 4,
   },
   input: {
     marginBottom: 16,

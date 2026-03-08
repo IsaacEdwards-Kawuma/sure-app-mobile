@@ -60,8 +60,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { error?: string } }; code?: string; message?: string };
       let message = ax?.response?.data?.error || ax?.message || 'Login failed';
-      if (!ax?.response && (ax?.code === 'ECONNREFUSED' || ax?.code === 'ERR_NETWORK' || ax?.message?.includes('Network'))) {
-        message = "Can't reach server. On a physical device? Set EXPO_PUBLIC_API_URL to your PC's IP (e.g. http://192.168.x.x:3000) in mobile/.env and restart Expo.";
+      if (!ax?.response) {
+        const code = ax?.code ?? '';
+        const isNetwork = code === 'ECONNREFUSED' || code === 'ERR_NETWORK' || code === 'ECONNABORTED' || ax?.message?.includes('Network') || ax?.message?.includes('timeout');
+        if (isNetwork) {
+          message = "Can't reach server. The backend may be waking up (Render free tier). Wait 30–60 seconds and try again. Check your internet connection.";
+        }
       }
       set({ error: message });
       return false;
@@ -78,8 +82,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { error?: string } }; code?: string; message?: string };
       let message = ax?.response?.data?.error || ax?.message || 'Sign up failed';
-      if (!ax?.response && (ax?.code === 'ECONNREFUSED' || ax?.code === 'ERR_NETWORK' || ax?.message?.includes('Network'))) {
-        message = "Can't reach server. On a physical device? Set EXPO_PUBLIC_API_URL to your PC's IP (e.g. http://192.168.x.x:3000) in mobile/.env and restart Expo.";
+      if (!ax?.response) {
+        const code = ax?.code ?? '';
+        const isNetwork = code === 'ECONNREFUSED' || code === 'ERR_NETWORK' || code === 'ECONNABORTED' || ax?.message?.includes('Network') || ax?.message?.includes('timeout');
+        if (isNetwork) {
+          message = "Can't reach server. The backend may be waking up (Render free tier). Wait 30–60 seconds and try again. Check your internet connection.";
+        }
       }
       set({ error: message });
       return false;
