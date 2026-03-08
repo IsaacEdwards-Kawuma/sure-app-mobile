@@ -6,6 +6,7 @@ import { CollapsibleSidebar } from '../../src/components/CollapsibleSidebar';
 import { MainHeader } from '../../src/components/MainHeader';
 import { useSidebarStore } from '../../src/features/sidebar/sidebarStore';
 import { useAppTheme } from '../../src/hooks/useAppTheme';
+import { useInactivityLock } from '../../src/hooks/useInactivityLock';
 
 const SIDEBAR_OVERLAY_WIDTH = 260;
 
@@ -14,6 +15,8 @@ export default function MainLayout() {
   const { open, setOpen } = useSidebarStore();
   const { background, surface } = useAppTheme();
   const isNarrow = width < 480;
+
+  useInactivityLock();
 
   const translateX = useSharedValue(open ? 0 : -SIDEBAR_OVERLAY_WIDTH);
   useEffect(() => {

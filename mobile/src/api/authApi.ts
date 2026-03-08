@@ -19,6 +19,8 @@ export interface AuthUser {
   id_number?: string | null;
   phone?: string | null;
   created_at?: string;
+  /** Optional profile image URL (if backend supports it). */
+  avatar_url?: string | null;
 }
 export interface AuthResponse {
   token: string;

@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { Text, Card, Button, TextInput } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,6 +23,8 @@ import { logout as reduxLogout } from '../../src/features/auth/authSlice';
 import { useResponsive } from '../../src/hooks/useResponsive';
 import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { colors } from '../../src/theme';
+import { baseApi } from '../../src/api/baseApi';
+import { store } from '../../src/store';
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -106,16 +109,17 @@ export default function UserScreen() {
   const handleLogout = () => {
     Alert.alert(
       'Log out',
-      'Are you sure you want to log out?',
+      'Are you sure you want to log out? Your data stays in your account and you can continue from where you left off when you sign in again.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Log out',
           style: 'destructive',
           onPress: async () => {
+            store.dispatch(baseApi.util.resetApiState());
             dispatch(reduxLogout());
             await logoutZustand();
-            router.replace('/(auth)/login');
+            router.replace('/login');
           },
         },
       ]
@@ -128,17 +132,38 @@ export default function UserScreen() {
       contentContainerStyle={[styles.content, { padding: spacing.screenHorizontal, paddingBottom: 32, flexGrow: 1 }]}
       refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.accent} />}
     >
-      <Text variant="titleMedium" style={[styles.title, { color: textPrimary }]}>User</Text>
+      <View style={styles.headerRow}>
+        <Text variant="titleLarge" style={[styles.title, { color: textPrimary }]}>User</Text>
+        <View style={[styles.loggedInBadge, { backgroundColor: colors.success + '22' }]}>
+          <MaterialCommunityIcons name="account-check" size={16} color={colors.success} />
+          <Text variant="labelSmall" style={[styles.loggedInText, { color: colors.success }]}>Currently logged in</Text>
+        </View>
+      </View>
 
       <Card style={[styles.card, { backgroundColor: surface }]}>
         <Card.Content>
           {user ? (
-            <View style={styles.avatarRow}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{user.name?.charAt(0)?.toUpperCase() || '?'}</Text>
+            <>
+              <View style={styles.profileSection}>
+                <View style={styles.avatarWrap}>
+                  {user.avatar_url ? (
+                    <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={[styles.avatar, styles.avatarLarge]}>
+                      <Text style={styles.avatarTextLarge}>{user.name?.charAt(0)?.toUpperCase() || '?'}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text variant="bodyMedium" style={[styles.signedInAs, { color: textSecondary }]}>
+                  Signed in as <Text style={{ color: textPrimary, fontWeight: '600' }}>{user.name}</Text>
+                </Text>
+                <Text variant="bodySmall" style={[styles.privateNote, { color: textSecondary }]}>
+                  Your data is private to your account. You can continue from where you left off whenever you sign in.
+                </Text>
               </View>
+              <View style={[styles.divider, { backgroundColor: borderSubtle }]} />
               <View style={styles.userInfo}>
-                <Text variant="titleLarge" style={[styles.name, { color: textPrimary }]}>{user.name}</Text>
+                <Text variant="titleMedium" style={[styles.name, { color: textPrimary }]}>{user.name}</Text>
                 <Text variant="bodySmall" style={[styles.muted, { color: textSecondary }]}>User ID: {user.id}</Text>
                 <Text variant="bodySmall" style={[styles.muted, { color: textSecondary }]}>Role: {user.role}</Text>
                 {user.permissions ? (
@@ -153,11 +178,11 @@ export default function UserScreen() {
                   </Text>
                 ) : null}
               </View>
-            </View>
+            </>
           ) : (
             <View style={styles.avatarRow}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>?</Text>
+              <View style={[styles.avatar, styles.avatarLarge]}>
+                <Text style={styles.avatarTextLarge}>?</Text>
               </View>
               <View style={styles.userInfo}>
                 <Text variant="bodyLarge" style={[styles.name, { color: textPrimary }]}>Loading profile…</Text>
@@ -271,9 +296,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingBottom: 32 },
   centered: { justifyContent: 'center', alignItems: 'center', padding: 24 },
-  title: { marginBottom: 16 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16, gap: 8 },
+  title: {},
+  loggedInBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, gap: 6 },
+  loggedInText: { fontWeight: '600' },
   card: { marginBottom: 16 },
-  avatarRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  profileSection: { alignItems: 'center', marginBottom: 16 },
+  avatarWrap: { marginBottom: 8 },
   avatar: {
     width: 64,
     height: 64,
@@ -283,7 +312,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 16,
   },
+  avatarLarge: { width: 96, height: 96, borderRadius: 48, marginRight: 0 },
+  avatarImage: { width: 96, height: 96, borderRadius: 48 },
   avatarText: { color: '#fff', fontWeight: '700', fontSize: 24 },
+  avatarTextLarge: { color: '#fff', fontWeight: '700', fontSize: 36 },
+  signedInAs: { marginBottom: 4 },
+  privateNote: { textAlign: 'center', paddingHorizontal: 16, marginTop: 4 },
+  divider: { height: 1, marginVertical: 12 },
+  avatarRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   userInfo: { flex: 1 },
   name: { marginBottom: 4 },
   muted: { marginTop: 2 },

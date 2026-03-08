@@ -66,7 +66,7 @@ export default function LoginScreen() {
         SureLink WiFi Manager
       </Text>
       <Text variant="bodyMedium" style={[styles.subtitle, { color: textSecondary }]}>
-        Sign in with your PIN
+        Sign in with your PIN. Each account is independent—your data stays private and you continue from where you left off.
       </Text>
 
       <View style={styles.toggleRow}>

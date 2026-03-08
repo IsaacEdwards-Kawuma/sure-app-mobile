@@ -30,6 +30,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/features/auth/store';
 import { logout as reduxLogout } from '../../src/features/auth/authSlice';
+import { baseApi } from '../../src/api/baseApi';
+import { store } from '../../src/store';
 import { useThemeStore, THEME_KEY } from '../../src/features/theme/themeStore';
 import { useSettingsStore } from '../../src/features/settings/store';
 import { useAppPreferencesStore, type AutoLockMinutes } from '../../src/features/appPreferences/store';
@@ -160,9 +162,10 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = async () => {
-    await logoutZustand();
+    store.dispatch(baseApi.util.resetApiState());
     dispatch(reduxLogout());
-    router.replace('/(auth)/login');
+    await logoutZustand();
+    router.replace('/login');
   };
 
   const handleThemeChange = async (value: 'dark' | 'light') => {
@@ -351,6 +354,32 @@ function GeneralPanel({
   onOpenGuide: () => void;
 }) {
   const { textPrimary, textSecondary } = useAppTheme();
+  const autoLockMinutes = useAppPreferencesStore((s) => s.autoLockMinutes);
+  const setAutoLockMinutes = useAppPreferencesStore((s) => s.setAutoLockMinutes);
+  const [biometricSupported, setBiometricSupported] = useState<boolean | null>(null);
+  const biometricsEnabled = useAppPreferencesStore((s) => s.biometricsEnabled);
+  const setBiometricsEnabled = useAppPreferencesStore((s) => s.setBiometricsEnabled);
+  const notificationSubscriptionAlerts = useAppPreferencesStore((s) => s.notificationSubscriptionAlerts);
+  const notificationDailyReminder = useAppPreferencesStore((s) => s.notificationDailyReminder);
+  const notificationRevenueAlert = useAppPreferencesStore((s) => s.notificationRevenueAlert);
+  const setNotificationSubscriptionAlerts = useAppPreferencesStore((s) => s.setNotificationSubscriptionAlerts);
+  const setNotificationDailyReminder = useAppPreferencesStore((s) => s.setNotificationDailyReminder);
+  const setNotificationRevenueAlert = useAppPreferencesStore((s) => s.setNotificationRevenueAlert);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { hasHardwareAsync } = await import('expo-local-authentication');
+        const hasHardware = await hasHardwareAsync();
+        if (!cancelled) setBiometricSupported(hasHardware);
+      } catch {
+        if (!cancelled) setBiometricSupported(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <View style={styles.panelInner}>
       <Text variant="titleMedium" style={[styles.generalSection, { color: textSecondary }]}>Appearance</Text>
@@ -366,6 +395,49 @@ function GeneralPanel({
           style={styles.segmented}
         />
       </View>
+
+      <Text variant="titleMedium" style={[styles.generalSection, { color: textSecondary }]}>Security & lock</Text>
+      <Text variant="bodySmall" style={[styles.muted, { color: textSecondary, marginBottom: 6 }]}>Auto-logout when app is in background</Text>
+      <SegmentedButtons
+        buttons={[
+          { value: '0', label: 'Never' },
+          { value: '1', label: '1 min' },
+          { value: '5', label: '5 min' },
+          { value: '15', label: '15 min' },
+          { value: '30', label: '30 min' },
+        ]}
+        value={String(autoLockMinutes)}
+        onValueChange={(v) => { setAutoLockMinutes(Number(v) as AutoLockMinutes); onSnack('Auto-lock updated'); }}
+        style={styles.segmented}
+      />
+      {biometricSupported === true && (
+        <List.Item
+          title="Biometrics"
+          description="Unlock with fingerprint or face"
+          right={() => <Switch value={biometricsEnabled} onValueChange={(v) => { setBiometricsEnabled(v); onSnack(v ? 'Biometrics enabled' : 'Biometrics disabled'); }} />}
+          style={styles.listItemSetting}
+        />
+      )}
+
+      <Text variant="titleMedium" style={[styles.generalSection, { color: textSecondary }]}>Reminders & alerts</Text>
+      <List.Item
+        title="Subscription due alerts"
+        description="Remind when subscriptions are due"
+        right={() => <Switch value={notificationSubscriptionAlerts} onValueChange={(v) => { setNotificationSubscriptionAlerts(v); onSnack('Saved'); }} />}
+        style={styles.listItemSetting}
+      />
+      <List.Item
+        title="Daily reminder"
+        description="Daily summary or reminder"
+        right={() => <Switch value={notificationDailyReminder} onValueChange={(v) => { setNotificationDailyReminder(v); onSnack('Saved'); }} />}
+        style={styles.listItemSetting}
+      />
+      <List.Item
+        title="Revenue below threshold"
+        description="Alert when daily revenue is low"
+        right={() => <Switch value={notificationRevenueAlert} onValueChange={(v) => { setNotificationRevenueAlert(v); onSnack('Saved'); }} />}
+        style={styles.listItemSetting}
+      />
 
       <Text variant="titleMedium" style={[styles.generalSection, { color: textSecondary }]}>Preferences</Text>
       <List.Item

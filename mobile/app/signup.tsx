@@ -90,7 +90,7 @@ export default function SignupScreen() {
             Create account
           </Text>
           <Text variant="bodyMedium" style={[styles.subtitle, { color: textSecondary }]}>
-            Sign up as a User (attendant) or as the first Admin
+            Sign up as a User (attendant) or as the first Admin. New accounts start empty—your data is private to your account.
           </Text>
 
           <TouchableOpacity

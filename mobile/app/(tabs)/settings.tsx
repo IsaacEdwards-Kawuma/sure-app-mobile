@@ -28,6 +28,8 @@ import { useDispatch } from 'react-redux';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/features/auth/store';
 import { logout as reduxLogout } from '../../src/features/auth/authSlice';
+import { baseApi } from '../../src/api/baseApi';
+import { store } from '../../src/store';
 import { useSettingsStore } from '../../src/features/settings/store';
 import { useAppPreferencesStore, type AutoLockMinutes } from '../../src/features/appPreferences/store';
 import { api } from '../../src/services/api';
@@ -144,8 +146,9 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = async () => {
-    await logoutZustand();
+    store.dispatch(baseApi.util.resetApiState());
     dispatch(reduxLogout());
+    await logoutZustand();
     router.replace('/login');
   };
 
