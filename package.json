@@ -1,8 +1,12 @@
 {
   "name": "sure-app-mobile",
   "private": true,
-  "description": "SureLink — API lives in backend/. Set Render Root Directory to 'backend'.",
+  "description": "SureLink — API runs from backend/. Works on Render with or without Root Directory set.",
   "scripts": {
-    "start": "echo 'ERROR: Set Root Directory to backend in Render dashboard.' && exit 1"
+    "postinstall": "cd backend && npm install",
+    "start": "cd backend && npm start"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
